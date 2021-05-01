@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# Simplest server demo: Serve file given as parameter
+#
+# Usage:
+# 
+# Run server to server README.html:
+# ncat -e "./simplest-server-demo README.html" -lk 8080
+# 
+# Open http://localhost:8080 in a browser 
+#
+
+. ./sertain.bash
+status 200 OK
+header Content-Type text/html
+ul_payload < "${1}"

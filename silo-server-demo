@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# Usage: Outputs client-sent payload or stream to file passed as parameter
+#
+# In one terminal run server:
+# ncat -e "./silo-server-demo /dev/tty" -lk 8080
+#
+# In another terminal run client:
+#
+# POST data
+# curl -d "Hello-server" localhost:8080
+#
+# PUT stream
+# curl -sf -T . localhost:8080
+# Keep entering stream on 2nd (client) terminal. It should appear in 1st (server) tty.
+
+
+output="${1}"
+
+. ./sertain.bash
+length="$(httparse | jq -r '."Content-Length"')" && length="${length//null/}"
+
+if [[ -n "${length}" ]]; then
+  dl_payload "${length}" > "${output}"
+  status 200 OK
+else
+  status 100 Continue
+  dl_stream > "${output}"
+  status 200 OK
+fi
