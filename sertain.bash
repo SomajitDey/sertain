@@ -19,7 +19,8 @@ httparse(){
   local header value
   while IFS=: read -rd $'\r\n' header value && read && [[ -n "${header}" ]];do
     value="${value//\"/\\\"}"
-    printf ",\n\"${header}\": \"${value#' '}\"" 
+    echo ","
+    echo -n "\"${header}\": \"${value#' '}\""
   done
 
   echo -e "\n}"
