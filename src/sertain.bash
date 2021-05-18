@@ -1,6 +1,19 @@
-# sertain: http SERver ToolchAIN library
-# Defines functions, combining which, one can easily make a basic http server using ncat and jq
-# No need for nodejs, go etc. Just pure bash scripting.
+# SERTAIN: SERver-side ToolchAIN
+
+# Brief: Defines functions, combining which, one can easily make a basic http server using 
+# ncat/nc/socat etc. for TCP and jq for handling any json. No need for NodeJS, Go, Python etc.
+
+# Usage: To use the functions defined herein just source this script with Bash.
+
+# Tips: 
+# Set your own Content-Type with: header "Content-Type" <type e.g. "text/html" or "text/plain">
+# To set session cookies: header "Set-Cookie" "<cookie-name>=<cookie-value>"
+# To send 200 OK response with no content: status; header "Connection" "close"; header
+
+# Refs:
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+#=============================================================================================
 
 httparse(){
   # Description: http request header parser.
@@ -32,10 +45,10 @@ httparse(){
 status(){
   # Description: Print the response status-line for v1.1 based on given status-code and reason-phrase.
   # I/O: No input. Output at stdout.
-  # Parameters: $1=status-code $2=reason-phrase
+  # Parameters: $1=status-code [Default 200]; $2=reason-phrase [Default OK]
   # TODO:
   
-  printf "%s\r\n" "HTTP/1.1 ${1} ${2}"
+  printf "%s\r\n" "HTTP/1.1 ${1:-200} ${2:-OK}"
   
   return 0
 }; export -f status
@@ -143,3 +156,19 @@ ul_stream(){
   
   return 0
 }; export -f ul_stream
+
+serve_error(){
+  # Usage: serve_error err_code reason-phrase [optional-message]
+  # If message is not provided the user is shown the reason-phrase
+  local err_code="${1}"
+  local reason_phrase="${2}"
+  local message="${3:-"${reason_phrase}"}"
+  status "${err_code}" "${reason_phrase}"
+  header "Content-Type" "text/plain"
+  ul_payload < <(echo "ERROR: ${message}")
+  exit "${err_code:-1}"
+}; export -f serve_error
+
+no_cache(){
+  header "Cache-Control" "no-store, max-age=0"
+}; export -f no_cache

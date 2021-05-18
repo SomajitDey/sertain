@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Description: A simple way to generate 128-bit Universally/Globally Unique Identifiers in GNU/Linux
+# Usage: ./UUID-GUID.bash ["Any text you wanna put in"]
+# Remark: Perhaps the use of so many variables is overkill, but Hey! It's fun ;-)
+# Author: Somajit Dey <dey.somajit@gmail.com> 2021
+
+user_element="${1}" # Passed by the user as parameter (optional)
+
+device_element="$(cat /sys/class/net/eth0/address)" # MAC address
+
+time_element="${EPOCHREALTIME}::${SECONDS}" # Spacer :: makes sure 1278-900 != 127-8900 e.g.
+
+randomness_element="${RANDOM}::${SRANDOM}" # Other :: are just to make things consistent
+
+history_element="${BASHPID}::${PPID}-${PWD}::${OLDPWD}-${HISTCMD}" # Spacer - separates contexts
+
+unique_string="${user_element}-${device_element}-${time_element}-${randomness_element}-${history_element}"
+
+md5sum <(echo "${unique_string}") | cut -d ' ' -f 1

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+# Brief: A basic rate-limiter. To be used with a socat-based server of the following form:
+# socat TCP4-LISTEN:${PORT},fork,reuseaddr SYSTEM:'RETRY_AFTER="$(./rate_limiter <seconds>)"; ./handler'
+
+# Parameter: Minimum number of seconds between consecutive requests from same IP. Default is 0
+
+# Output and Exit-code: The number of seconds remaining before valid request can be made. 0 is not output.
+
+# To simply run GC and nothing else call rate_limiter with no parameter. 
+#=============================================================================================
+
+min_interval="${1:-0}" # minimum interval between consecutive requests from same IP in seconds
+token_expiry="$((min_interval/60 + 1))"
+
+# Garbage-Collection of expired tokens in background. Skip if already active.
+flock -n . find . -type f -name '.rate_limiter_token_for_*' -mmin +"${token_expiry}" -delete &
+
+connecting_IP="${SOCAT_PEERADDR}"
+token_file=".rate_limiter_token_for_${connecting_IP}" # Invisible file with unique filename
+
+current_time="${EPOCHSECONDS}"
+last_request_at="$(date +%s -r "${token_file}" 2>/dev/null)"
+request_interval="$((current_time-last_request_at))"
+
+if ((request_interval<min_interval));then
+  retry_after="$((min_interval-request_interval))"
+  echo "${retry_after}"
+  exit "${retry_after}"
+else
+  ((min_interval==0)) || touch "${token_file}"
+  exit 0
+fi

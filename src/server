@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+# Description: A simple http server with very basic rate-limiting
+
+# Parameters:
+#   -p <port to bind to> #[Defaults to env var PORT]
+#   -s <minimum number of seconds between consecutive rate-limited requests> #[Default 0]
+#   -m <maximum number of concurrent connections allowed> #[Default 100]
+#   <path to the handler>
+#
+# Example: ./server -p 8080 -s 6 -m 200 ./handler
+
+# Note: All relative paths referenced here are relative to this project's root directory
+# that we cd to below. Rate_limiter script is kept in separate file simply for modularity.
+#=========================================================================================
+
+cd "${BASH_SOURCE%/*}/.."
+
+trap 'echo "Server exiting"' exit
+
+while getopts ':p:s:m:' option;do
+  case "${option}" in
+    p) port="${OPTARG}";;
+    m) max_conns="${OPTARG}";;
+    s) rate_limit_int="${OPTARG}";;
+  esac
+done
+handler="${!OPTIND}" # The awesome Bash indirect expansion
+
+port="${port:="${PORT}"}"
+max_conns="${max_conns:=100}"
+rate_limit_int="${rate_limit_int:=0}" # Unnecessary as rate_limiter already takes care of default
+
+echo "Listening on port ${port}..."
+
+etc/socat TCP4-LISTEN:"${port}",max-children="${max_conns}",fork,reuseaddr \
+SYSTEM:"export RETRY_AFTER=\$(src/rate_limiter ${rate_limit_int}); ${handler}" 2>/dev/null

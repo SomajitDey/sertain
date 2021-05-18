@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# Brief: Handler for a simple basic echo server.
+# Usage: 
+# src/server -p 8080 -s 6 'examples/echo_handler' # Path relative to project root directory
+# 6 means rate-limited to 1 request per 6 seconds
+# Test with client: curl localhost:8080
+#==========================================================================================
+
+cd "${BASH_SOURCE%/*}/.."
+
+. src/sertain.bash
+
+[[ -n "${RETRY_AFTER}" ]] && serve_error 429 "Too Many Requests" "Try after ${RETRY_AFTER}s"
+
+tmpfile="$(mktemp /tmp/XXXXX.sertain.json)"
+httparse > "${tmpfile}" # Dumping all request headers to tmpfile
+method="$(etc/jq -r '.method' "${tmpfile}")"
+content_length="$(etc/jq -r '."Content-Length"' "${tmpfile}")"
+rm -f "${tmpfile}"
+
+case "${method}" in 
+GET)
+  status 200 OK
+  ul_payload < <(echo -e "Hello from server\nNow try: 
+  curl -sSf -T. localhost:8080
+  or
+  curl -d @- localhost:8080 < <(echo hi)")
+  ;;
+PUT)
+  status
+  dl_stream | ul_stream
+  ;;
+POST)
+  status
+  dl_payload "${content_length}" | ul_payload
+  ;;
+*)
+  serve_error 405 "Method Not Allowed"
+  ;;
+esac
